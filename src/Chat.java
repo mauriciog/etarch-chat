@@ -234,7 +234,7 @@ public class Chat extends JFrame{
 					
 						String destin = findWSDestin();
 						
-						if(fin.write(destin, msg))
+						if(fin.write(destin, msg.getBytes()))
 							buffer.append("<b style=color:red>Você</b><b> para </b><b style=color:green>"+destin+"</b><b>: "+msg.replace("\n", "<br>")+"</b><br>");
 						else
 							buffer.append("<html><b style=color:red> Erro ao enviar mensagem! </b></br><br>");
@@ -262,44 +262,48 @@ public class Chat extends JFrame{
 		
 	}
 	private void createSocketAndListeners(final String source) {
-		fin = FinSocket.open();
+		fin = new FinSocket();
 		
-		if(!fin.register(source)){
-        	JOptionPane.showMessageDialog(Chat.this, "Não foi possível se registrar no DTS com o título \""+source+"\"");
-	       	System.exit(1);
-	    }
-		
-		if(!fin.join("Default")){
-        	JOptionPane.showMessageDialog(Chat.this, "Não foi possível \"entrar\" no workspace Default do Chat");
-	       	System.exit(1);
-	    }
-		
-		this.addWindowListener( new WindowAdapter(){   
-			@Override
-			public void windowClosing(WindowEvent evt){
-				if(JOptionPane.showConfirmDialog(Chat.this, "Deseja realmente sair?", "",
-						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
-					fin.close();
-					System.exit(0);
-				}else
-					Chat.this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-			}  
-		});
-		
-		new Thread(){
-			@Override
-			public void run(){
-				while(true){
-					Message msg = fin.read();
-					if(msg != null || !msg.getPayload().isEmpty()){
-							buffer.append("<b style=color:blue>"+msg.getSource()+"</b><b> para </b><b style=color:green>"+msg.getDestination()+"</b><b>: "+msg.getPayload().replace("\n", "<br>")+"</b><br>");						
+		if(fin.open()){
+			if(!fin.register(source)){
+		    	JOptionPane.showMessageDialog(Chat.this, "Não foi possível se registrar no DTS com o título \""+source+"\"");
+		       	System.exit(1);
+		    }
+			
+			if(!fin.join("Default")){
+		    	JOptionPane.showMessageDialog(Chat.this, "Não foi possível \"entrar\" no workspace Default do Chat");
+		       	System.exit(1);
+		    }
+			
+			this.addWindowListener( new WindowAdapter(){   
+				@Override
+				public void windowClosing(WindowEvent evt){
+					if(JOptionPane.showConfirmDialog(Chat.this, "Deseja realmente sair?", "",
+							JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
+						fin.close();
+						System.exit(0);
+					}else
+						Chat.this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+				}  
+			});
+			
+			new Thread(){
+				@Override
+				public void run(){
+					while(true){
+						Message msg = fin.read();
+						if(msg != null || msg.getPayload().length > 0){
+								buffer.append("<b style=color:blue>"+msg.getSource()+"</b><b> para </b><b style=color:green>"+msg.getDestination()+"</b><b>: "+new String(msg.getPayload()).replace("\n", "<br>")+"</b><br>");						
+								
+							viewPane.setText("<html>"+buffer+"</html>");
 							
-						viewPane.setText("<html>"+buffer+"</html>");
-						
+						}
 					}
 				}
-			}
-		}.start();
+			}.start();
+		}else{
+			JOptionPane.showMessageDialog(this, "Não  foi possível criar o socket Finlan.");
+		}
 	}
 
 	protected String findWSDestin() {
